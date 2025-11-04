@@ -22,5 +22,3 @@ dependencyResolutionManagement {
 rootProject.name = "Kniha_2.0"
 include(":app")
 
-include(":pageflipLocal")
-project(":pageflipLocal").projectDir = File(rootDir, "../android-PageFlip/PageFlip")

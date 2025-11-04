@@ -42,7 +42,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":pageflipLocal"))
+    implementation(files("libs/pagecurl-release.aar"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
