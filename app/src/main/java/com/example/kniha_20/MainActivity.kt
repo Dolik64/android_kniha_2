@@ -22,6 +22,8 @@ import com.example.kniha_20.ui.theme.Kniha_20Theme
 import eu.wewox.pagecurl.page.PageCurl
 import eu.wewox.pagecurl.page.rememberPageCurlState
 import eu.wewox.pagecurl.ExperimentalPageCurlApi
+import eu.wewox.pagecurl.config.rememberPageCurlConfig
+
 
 
 
@@ -44,84 +46,97 @@ class MainActivity : ComponentActivity() {
 fun BookSpreadByClick() {
     val scope = rememberCoroutineScope()
 
-    // počet “papírových” stran (levá = 1, pravá = 2, atd.)
     val totalPages = 12
+    val spreads = (totalPages + 1) / 2
 
-    // index levé strany aktuální dvojstrany; držíme ho vždy sudý: 0,2,4…
-    var spreadStart by remember { mutableStateOf(0) }
+    // jeden společný stav pro celou dvojstranu
+    val curl = rememberPageCurlState()
 
-    val leftCurl = rememberPageCurlState()
-    val rightCurl = rememberPageCurlState()
+    // vypneme interní gesta knihovny, kliky řeší overlay
+    val config = rememberPageCurlConfig(
+        tapForwardEnabled = false,
+        tapBackwardEnabled = false,
+        dragForwardEnabled = false,
+        dragBackwardEnabled = false
+    )
 
-    Row(Modifier.fillMaxSize()) {
-        // LEVÁ STRANA
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            // Jednoduché 2-frame “curl” plátno; obsah měníme podle spreadStart
-            PageCurl(count = 2, state = leftCurl) { _ ->
-                PageFace(
-                    label = "Strana ${spreadStart + 1}",
-                    hint = "Klepni vlevo pro zpět"
+    Box(Modifier.fillMaxSize()) {
+        // jedna PageCurl přes celou šířku, index = dvojstrana
+        PageCurl(
+            count = spreads,
+            state = curl,
+            config = config
+        ) { spreadIndex ->
+            val leftPage = spreadIndex * 2 + 1
+            val rightPage = leftPage + 1
+
+            Row(Modifier.fillMaxSize()) {
+                // levá strana
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    PageFace(
+                        label = "Strana $leftPage",
+                        hint = "Klepni vlevo pro zpět"
+                    )
+                }
+
+                // hřbet
+                Box(
+                    Modifier
+                        .width(1.dp)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f))
                 )
-            }
 
-            // klikací plocha – levou půlku obrazovky používáme pro návrat
+                // pravá strana
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (rightPage <= totalPages) {
+                        PageFace(
+                            label = "Strana $rightPage",
+                            hint = "Klepni vpravo pro vpřed"
+                        )
+                    } else {
+                        PageFace(label = "", hint = "")
+                    }
+                }
+            }
+        }
+
+        // klikací overlay přes obě poloviny
+        Row(Modifier.matchParentSize()) {
+            // vlevo = prev
             Box(
                 Modifier
-                    .matchParentSize()
-                    .pointerInput(spreadStart) {
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .pointerInput(Unit) {
                         detectTapGestures {
-                            if (spreadStart > 0) {
-                                scope.launch { leftCurl.prev() }
-                                spreadStart = (spreadStart - 2).coerceAtLeast(0)
+                            if (curl.current > 0) {
+                                scope.launch { curl.prev() }
                             }
                         }
                     }
             )
-        }
-
-        // DĚLICÍ ČÁRA HŘBETU KNIHY
-        Box(
-            Modifier
-                .width(1.dp)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f))
-        )
-
-        // PRAVÁ STRANA
-        val rightIndex = spreadStart + 1
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surface)
-        ) {
-            PageCurl(count = 2, state = rightCurl) { _ ->
-                if (rightIndex < totalPages) {
-                    PageFace(
-                        label = "Strana ${rightIndex + 1}",
-                        hint = "Klepni vpravo pro vpřed"
-                    )
-                } else {
-                    // lichý počet stran: prázdná poslední pravá
-                    PageFace(label = "", hint = "")
-                }
-            }
-
-            // klikací plocha – pravá půlka jde vpřed
+            // vpravo = next
             Box(
                 Modifier
-                    .matchParentSize()
-                    .pointerInput(spreadStart, totalPages) {
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .pointerInput(spreads) {
                         detectTapGestures {
-                            val nextStart = spreadStart + 2
-                            if (nextStart < totalPages) {
-                                scope.launch { rightCurl.next() }
-                                spreadStart = nextStart
+                            if (curl.current < spreads - 1) {
+                                scope.launch { curl.next() }
                             }
                         }
                     }
@@ -129,6 +144,8 @@ fun BookSpreadByClick() {
         }
     }
 }
+
+
 
 @Composable
 private fun PageFace(label: String, hint: String) {
