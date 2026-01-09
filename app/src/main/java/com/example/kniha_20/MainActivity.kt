@@ -6,17 +6,19 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,22 +67,33 @@ fun KnihaApp() {
             )
         }
 
-        // 2. PŘEHRÁVAČ
+        // 2. PŘEHRÁVAČ (KNIHA)
         composable<PlayerRoute> {
             BookSpreadByClick()
         }
 
-        // 3. EDITOR (Test vykreslování z ASSETS)
+        // 3. EDITOR (Test vykreslování)
         composable<EditorRoute> {
-            // --- ZMĚNA ZDE ---
-            // Načteme data z MockData (které odkazují na tvé obrázky v assets)
-            val testPageData = MockData.getTestAlbum()
+            // Vytvoříme testovací strukturu stránky pro editor
+            val testPageData = BackgroundDecorator(
+                slots = ContentSlot(
+                    content = InsetDecorator(
+                        options = InsetOptions(top = 40.0, left = 20.0, right = 20.0, bottom = 40.0),
+                        slots = ContentSlot(
+                            content = GridLayout(
+                                options = GridOptions(rows = 2, columns = 1, gap = 10),
+                                slots = listOf(
+                                    ImagerThing(options = ImageOptions(url = "file:///android_asset/foto1.jpg")),
+                                    TextThing(options = TextOptions(html = "Ukázka z editoru"))
+                                )
+                            )
+                        )
+                    )
+                )
+            )
 
-            // Vykreslíme stránku pomocí Rendererů
             Box(Modifier.fillMaxSize().background(Color.White)) {
                 RenderComponent(component = testPageData)
-
-                // Tlačítko zpět
                 Button(
                     onClick = { navController.popBackStack() },
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
@@ -93,16 +106,17 @@ fun KnihaApp() {
 }
 
 /**
- * Logika přehrávače knihy (PageCurl)
+ * Logika přehrávače knihy s TLAČÍTKY
  */
 @Composable
 fun BookSpreadByClick() {
     val scope = rememberCoroutineScope()
-    val totalPages = 12
+    val totalPages = 12 // Celkový počet stran (může být dynamický z modelu)
     val spreads = (totalPages + 1) / 2
     val curl = rememberPageCurlState()
 
-    // Konfigurace: Vypnutá gesta tažení, zapnutá jen na klik přes overlay
+    // 1. DŮLEŽITÉ: Konfigurace - Vypneme všechna gesta (klikání i tažení na samotné stránce)
+    // To zajistí, že stránka se otočí POUZE přes naše tlačítka.
     val config = rememberPageCurlConfig(
         tapForwardEnabled = false,
         tapBackwardEnabled = false,
@@ -111,16 +125,18 @@ fun BookSpreadByClick() {
     )
 
     Box(Modifier.fillMaxSize()) {
+        // A. Samotná kniha (vrstva vespod)
         PageCurl(
             count = spreads,
             state = curl,
             config = config
         ) { spreadIndex ->
+            // Výpočet čísel stránek na dvojstraně
             val leftPage = spreadIndex * 2 + 1
             val rightPage = leftPage + 1
 
             Row(Modifier.fillMaxSize()) {
-                // Levá stránka
+                // Levá strana
                 Box(
                     Modifier
                         .weight(1f)
@@ -128,10 +144,11 @@ fun BookSpreadByClick() {
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    PageFace(label = "Strana $leftPage", hint = "Klepni vlevo pro zpět")
+                    // Zde by se volal RenderComponent(leftPageModel)
+                    PageFace(label = "Strana $leftPage", hint = "")
                 }
 
-                // Hřbet
+                // Stín hřbetu knihy uprostřed
                 Box(
                     Modifier
                         .width(1.dp)
@@ -139,7 +156,7 @@ fun BookSpreadByClick() {
                         .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f))
                 )
 
-                // Pravá stránka
+                // Pravá strana
                 Box(
                     Modifier
                         .weight(1f)
@@ -148,42 +165,67 @@ fun BookSpreadByClick() {
                     contentAlignment = Alignment.Center
                 ) {
                     if (rightPage <= totalPages) {
-                        PageFace(label = "Strana $rightPage", hint = "Klepni vpravo pro vpřed")
-                    } else {
-                        PageFace(label = "", hint = "")
+                        // Zde by se volal RenderComponent(rightPageModel)
+                        PageFace(label = "Strana $rightPage", hint = "")
                     }
                 }
             }
         }
 
-        // Overlay pro klikání (otáčení stránek)
-        Row(Modifier.matchParentSize()) {
-            Box(
-                Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                            if (curl.current > 0) scope.launch { curl.prev() }
-                        }
-                    }
-            )
-            Box(
-                Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .pointerInput(spreads) {
-                        detectTapGestures {
-                            if (curl.current < spreads - 1) scope.launch { curl.next() }
-                        }
-                    }
-            )
+        // B. Vrstva s tlačítky (vrstva nahoře - Overlay)
+
+        // Tlačítko ZPĚT (zobrazí se, pokud nejsme na úplném začátku)
+        if (curl.current > 0) {
+            NavImageButton(
+                resId = R.drawable.btn_prev, // Ujistěte se, že tento soubor existuje v res/drawable
+                modifier = Modifier
+                    .align(Alignment.CenterStart) // Zarovnat vlevo doprostřed
+                    .padding(start = 16.dp)       // Odsazení od kraje
+            ) {
+                scope.launch { curl.prev() }
+            }
+        }
+
+        // Tlačítko VPŘED (zobrazí se, pokud nejsme na úplném konci)
+        if (curl.current < spreads - 1) {
+            NavImageButton(
+                resId = R.drawable.btn_next, // Ujistěte se, že tento soubor existuje v res/drawable
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)   // Zarovnat vpravo doprostřed
+                    .padding(end = 16.dp)         // Odsazení od kraje
+            ) {
+                scope.launch { curl.next() }
+            }
         }
     }
 }
 
 /**
- * Pomocná komponenta pro text na stránce v přehrávači
+ * Pomocná komponenta pro obrázkové tlačítko s reakcí na kliknutí (Ripple effect)
+ */
+@Composable
+fun NavImageButton(
+    resId: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    // IconButton zajistí "ripple" efekt (kruhové vlnění při stisku)
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+            .size(130.dp) // Velikost tlačítka - upravte dle potřeby
+    ) {
+        // Vykreslení PNG obrázku uvnitř tlačítka
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = "Navigace",
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+/**
+ * Pomocná komponenta pro text na stránce v přehrávači (Demo obsah)
  */
 @Composable
 private fun PageFace(label: String, hint: String) {
