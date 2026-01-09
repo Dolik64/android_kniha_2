@@ -9,11 +9,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -21,6 +23,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.kniha_20.model.*
+import com.example.kniha_20.ui.components.RenderComponent
 import com.example.kniha_20.ui.screen.EditorRoute
 import com.example.kniha_20.ui.screen.HomeRoute
 import com.example.kniha_20.ui.screen.HomeScreen
@@ -38,7 +42,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Kniha_20Theme {
-                // Hlavní vstupní bod aplikace s navigací
                 KnihaApp()
             }
         }
@@ -46,8 +49,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Hlavní kompozice, která drží Navigaci (Controller).
- * Rozhoduje, která obrazovka se právě zobrazí.
+ * Hlavní rozcestník (Navigace)
  */
 @Composable
 fun KnihaApp() {
@@ -63,37 +65,44 @@ fun KnihaApp() {
             )
         }
 
-        // 2. PŘEHRÁVAČ ALBA (Zatím hardcodované demo)
+        // 2. PŘEHRÁVAČ
         composable<PlayerRoute> {
-            // Zde později načteme data z JSONu a pošleme je do přehrávače
             BookSpreadByClick()
         }
 
-        // 3. EDITOR ALBA (Zatím jen text)
+        // 3. EDITOR (Test vykreslování z ASSETS)
         composable<EditorRoute> {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Zde budeme programovat Editor...")
+            // --- ZMĚNA ZDE ---
+            // Načteme data z MockData (které odkazují na tvé obrázky v assets)
+            val testPageData = MockData.getTestAlbum()
+
+            // Vykreslíme stránku pomocí Rendererů
+            Box(Modifier.fillMaxSize().background(Color.White)) {
+                RenderComponent(component = testPageData)
+
+                // Tlačítko zpět
+                Button(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
+                ) {
+                    Text("Zpět")
+                }
             }
         }
     }
 }
 
 /**
- * Původní implementace přehrávače knihy (Demo).
- * Funguje na principu klikání vlevo/vpravo.
+ * Logika přehrávače knihy (PageCurl)
  */
 @Composable
 fun BookSpreadByClick() {
     val scope = rememberCoroutineScope()
-
-    // Demo data: 12 stránek = 6 dvojstran (spreads)
     val totalPages = 12
     val spreads = (totalPages + 1) / 2
-
-    // Stav otáčení stránek
     val curl = rememberPageCurlState()
 
-    // Konfigurace: Vypneme tažení prstem, chceme jen klikání
+    // Konfigurace: Vypnutá gesta tažení, zapnutá jen na klik přes overlay
     val config = rememberPageCurlConfig(
         tapForwardEnabled = false,
         tapBackwardEnabled = false,
@@ -102,18 +111,16 @@ fun BookSpreadByClick() {
     )
 
     Box(Modifier.fillMaxSize()) {
-        // Samotná komponenta knihy
         PageCurl(
             count = spreads,
             state = curl,
             config = config
         ) { spreadIndex ->
-            // Vypočítáme čísla stránek na aktuální dvojstraně
             val leftPage = spreadIndex * 2 + 1
             val rightPage = leftPage + 1
 
             Row(Modifier.fillMaxSize()) {
-                // --- LEVÁ STRANA ---
+                // Levá stránka
                 Box(
                     Modifier
                         .weight(1f)
@@ -121,13 +128,10 @@ fun BookSpreadByClick() {
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    PageFace(
-                        label = "Strana $leftPage",
-                        hint = "Klepni vlevo pro zpět"
-                    )
+                    PageFace(label = "Strana $leftPage", hint = "Klepni vlevo pro zpět")
                 }
 
-                // --- HŘBET KNIHY (Stín) ---
+                // Hřbet
                 Box(
                     Modifier
                         .width(1.dp)
@@ -135,7 +139,7 @@ fun BookSpreadByClick() {
                         .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f))
                 )
 
-                // --- PRAVÁ STRANA ---
+                // Pravá stránka
                 Box(
                     Modifier
                         .weight(1f)
@@ -144,44 +148,33 @@ fun BookSpreadByClick() {
                     contentAlignment = Alignment.Center
                 ) {
                     if (rightPage <= totalPages) {
-                        PageFace(
-                            label = "Strana $rightPage",
-                            hint = "Klepni vpravo pro vpřed"
-                        )
+                        PageFace(label = "Strana $rightPage", hint = "Klepni vpravo pro vpřed")
                     } else {
-                        // Konec knihy (prázdná stránka)
                         PageFace(label = "", hint = "")
                     }
                 }
             }
         }
 
-        // --- OVLÁDACÍ VRSTVA (Overlay) ---
-        // Neviditelná vrstva přes celou obrazovku, která zachytává kliknutí
+        // Overlay pro klikání (otáčení stránek)
         Row(Modifier.matchParentSize()) {
-            // Levá polovina -> Zpět
             Box(
                 Modifier
                     .weight(1f)
                     .fillMaxHeight()
                     .pointerInput(Unit) {
                         detectTapGestures {
-                            if (curl.current > 0) {
-                                scope.launch { curl.prev() }
-                            }
+                            if (curl.current > 0) scope.launch { curl.prev() }
                         }
                     }
             )
-            // Pravá polovina -> Vpřed
             Box(
                 Modifier
                     .weight(1f)
                     .fillMaxHeight()
                     .pointerInput(spreads) {
                         detectTapGestures {
-                            if (curl.current < spreads - 1) {
-                                scope.launch { curl.next() }
-                            }
+                            if (curl.current < spreads - 1) scope.launch { curl.next() }
                         }
                     }
             )
@@ -190,7 +183,7 @@ fun BookSpreadByClick() {
 }
 
 /**
- * Pomocná komponenta pro obsah stránky (texty uprostřed)
+ * Pomocná komponenta pro text na stránce v přehrávači
  */
 @Composable
 private fun PageFace(label: String, hint: String) {
