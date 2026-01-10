@@ -83,6 +83,7 @@ data class SplitLayout(
 @Serializable
 @SerialName("imager")
 data class ImagerThing(
+    val id: String = java.util.UUID.randomUUID().toString(),
     val options: ImageOptions? = null
 ) : BookComponent
 

@@ -2,6 +2,7 @@ package com.example.kniha_20.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,19 +20,26 @@ import com.example.kniha_20.model.*
 
 /**
  * REKURZIVNÍ RENDERER
- * Tato funkce se podívá, co je to za komponentu, a podle toho ji vykreslí.
- * Pokud komponenta obsahuje další děti (slots), zavolá se znovu pro ně.
+ *
+ * @param component Komponenta k vykreslení (z modelu)
+ * @param modifier Modifikátory vzhledu
+ * @param onImageClick Callback funkce, která se zavolá při kliknutí na obrázek.
+ * Vrací ID komponenty (String).
  */
 @Composable
-fun RenderComponent(component: BookComponent, modifier: Modifier = Modifier) {
+fun RenderComponent(
+    component: BookComponent,
+    modifier: Modifier = Modifier,
+    onImageClick: ((String) -> Unit)? = null
+) {
     when (component) {
         // --- 1. LAYOUTY (Rozložení) ---
-        is GridLayout -> RenderGrid(component, modifier)
-        is SplitLayout -> RenderSplit(component, modifier)
+        // Musíme předat onImageClick dál do vnořených funkcí
+        is GridLayout -> RenderGrid(component, modifier, onImageClick)
+        is SplitLayout -> RenderSplit(component, modifier, onImageClick)
 
         // --- 2. DEKORÁTORY (Obaly) ---
         is InsetDecorator -> {
-            // Inset přidá padding a pak vykreslí vnitřek
             val opt = component.options
             Box(
                 modifier = modifier.padding(
@@ -41,36 +49,40 @@ fun RenderComponent(component: BookComponent, modifier: Modifier = Modifier) {
                     bottom = opt?.bottom?.dp ?: 0.dp
                 )
             ) {
-                // Pokud má obsah, vykreslí ho
-                component.slots?.content?.let { RenderComponent(it) }
+                // Rekurze: vykreslíme vnitřek a pošleme callback dál
+                component.slots?.content?.let {
+                    RenderComponent(it, onImageClick = onImageClick)
+                }
             }
         }
         is BackgroundDecorator -> {
-            // Zatím jen barevné pozadí, později sem dáme obrázek
             Box(modifier = modifier.fillMaxSize().background(Color(0xFFF0F0F0))) {
-                component.slots?.content?.let { RenderComponent(it) }
+                component.slots?.content?.let {
+                    RenderComponent(it, onImageClick = onImageClick)
+                }
             }
         }
         is OpacityDecorator -> {
-            // Jen průhlednost, vykreslíme vnitřek
-            component.slots?.content?.let { RenderComponent(it) }
+            // Zde by se nastavila alpha, zatím jen propustíme obsah
+            component.slots?.content?.let {
+                RenderComponent(it, onImageClick = onImageClick)
+            }
         }
         is AudioDecorator -> {
-            // Audio není vidět, jen vykreslíme vnitřek (logiku přehrávání budeme řešit jinde)
-            component.slots?.content?.let { RenderComponent(it) }
+            component.slots?.content?.let {
+                RenderComponent(it, onImageClick = onImageClick)
+            }
         }
 
-        // --- 3. OBSAH (Listy) ---
-        is ImagerThing -> RenderImage(component, modifier)
+        // --- 3. OBSAH (Listy stromu) ---
+        is ImagerThing -> RenderImage(component, modifier, onImageClick)
         is TextThing -> RenderText(component, modifier)
         is VideoThing -> {
-            // Placeholder pro video
             Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
                 Text("VIDEO: ${component.options?.uri ?: "No URI"}", color = Color.White)
             }
         }
         is EmptyThing -> {
-            // Prázdné místo
             Spacer(modifier = modifier)
         }
     }
@@ -79,14 +91,17 @@ fun RenderComponent(component: BookComponent, modifier: Modifier = Modifier) {
 // --- POMOCNÉ FUNKCE PRO JEDNOTLIVÉ TYPY ---
 
 @Composable
-fun RenderGrid(component: GridLayout, modifier: Modifier) {
+fun RenderGrid(
+    component: GridLayout,
+    modifier: Modifier,
+    onImageClick: ((String) -> Unit)?
+) {
     val rows = component.options?.rows ?: 1
     val cols = component.options?.columns ?: 1
     val gap = component.options?.gap?.dp ?: 0.dp
     val slots = component.slots
 
     Column(modifier = modifier.fillMaxSize()) {
-        // Jednoduchá implementace Gridu pomocí Row a Column
         var itemIndex = 0
         for (r in 0 until rows) {
             Row(
@@ -103,7 +118,8 @@ fun RenderGrid(component: GridLayout, modifier: Modifier) {
                             .fillMaxHeight()
                     ) {
                         if (item != null) {
-                            RenderComponent(item)
+                            // DŮLEŽITÉ: Předáváme callback dál
+                            RenderComponent(item, onImageClick = onImageClick)
                         }
                     }
                     itemIndex++
@@ -117,9 +133,13 @@ fun RenderGrid(component: GridLayout, modifier: Modifier) {
 }
 
 @Composable
-fun RenderSplit(component: SplitLayout, modifier: Modifier) {
+fun RenderSplit(
+    component: SplitLayout,
+    modifier: Modifier,
+    onImageClick: ((String) -> Unit)?
+) {
     val isHorizontal = component.options?.horizontal == true
-    val ratio = (component.options?.ratio ?: 50) / 100f // Převod 50 -> 0.5f
+    val ratio = (component.options?.ratio ?: 50) / 100f
     val gap = component.options?.gap?.dp ?: 0.dp
     val first = component.slots?.first
     val second = component.slots?.second
@@ -127,59 +147,69 @@ fun RenderSplit(component: SplitLayout, modifier: Modifier) {
     if (isHorizontal) {
         Row(modifier = modifier.fillMaxSize()) {
             Box(Modifier.weight(ratio).fillMaxHeight()) {
-                if (first != null) RenderComponent(first)
+                if (first != null) RenderComponent(first, onImageClick = onImageClick)
             }
             Spacer(Modifier.width(gap))
             Box(Modifier.weight(1f - ratio).fillMaxHeight()) {
-                if (second != null) RenderComponent(second)
+                if (second != null) RenderComponent(second, onImageClick = onImageClick)
             }
         }
     } else {
         Column(modifier = modifier.fillMaxSize()) {
             Box(Modifier.weight(ratio).fillMaxWidth()) {
-                if (first != null) RenderComponent(first)
+                if (first != null) RenderComponent(first, onImageClick = onImageClick)
             }
             Spacer(Modifier.height(gap))
             Box(Modifier.weight(1f - ratio).fillMaxWidth()) {
-                if (second != null) RenderComponent(second)
+                if (second != null) RenderComponent(second, onImageClick = onImageClick)
             }
         }
     }
 }
 
 @Composable
-fun RenderImage(component: ImagerThing, modifier: Modifier) {
+fun RenderImage(
+    component: ImagerThing,
+    modifier: Modifier,
+    onImageClick: ((String) -> Unit)?
+) {
     val url = component.options?.url ?: ""
 
-    // Rozhodneme, jak se má obrázek roztáhnout (cover = oříznout, contain = celá fotka)
-    // Pokud není zadáno nic, použijeme Fit (celá fotka)
     val contentScale = when (component.options?.size) {
         "cover" -> ContentScale.Crop
         "contain" -> ContentScale.Fit
         else -> ContentScale.Fit
     }
 
-    // Použijeme Coil pro načtení obrázku
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(url)
-            .crossfade(true) // Jemná animace načtení
+            .crossfade(true)
             .build(),
-        contentDescription = "Obrázek z alba",
+        contentDescription = "Obrázek",
         contentScale = contentScale,
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            // ZDE JE KLÍČOVÁ ČÁST:
+            // Pokud je definován callback (jsme v editoru), přidáme reakci na kliknutí.
+            // Pokud je onImageClick null (jsme v přehrávači), obrázek nebude reagovat.
+            .then(
+                if (onImageClick != null) {
+                    Modifier.clickable { onImageClick(component.id) }
+                } else {
+                    Modifier
+                }
+            )
     )
 }
 
 @Composable
 fun RenderText(component: TextThing, modifier: Modifier) {
-    // ZATÍM JEDNODUCHÝ TEXT - Později musíme vyřešit HTML rendering
     Box(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center // Zjednodušeno, normálně bychom četli v-align
+        contentAlignment = Alignment.Center
     ) {
         Text(
-            // Odstraní HTML tagy pro náhled, aby text nebyl plný <h3> a <p>
             text = component.options?.html?.replace(Regex("<.*?>"), "") ?: "",
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(8.dp)
