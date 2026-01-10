@@ -36,7 +36,7 @@ AAR_PATHS: list[str] = [
 AAR_GLOB: str = r"C:\Users\volny\AndroidStudioProjects\Kniha_20\app\libs\*.aar"
 
 # c) výstupní adresář
-OUTPUT_DIR: str = r"C:\Users\volny\AndroidStudioProjects\Kniha_20\app\libs"
+OUTPUT_DIR: str = r"C:\Users\volny\AndroidStudioProjects"
 
 # d) prefix názvu výstupního souboru
 OUTPUT_PREFIX: str = "aar_dump_"
