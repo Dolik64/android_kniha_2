@@ -1,4 +1,4 @@
-package com.example.kniha_20.ui.screens
+package com.example.kniha_20.ui.navigation
 
 import kotlinx.serialization.Serializable
 

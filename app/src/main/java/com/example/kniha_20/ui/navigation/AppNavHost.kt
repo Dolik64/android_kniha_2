@@ -4,9 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.kniha_20.ui.screens.EditorRoute
-import com.example.kniha_20.ui.screens.HomeRoute
-import com.example.kniha_20.ui.screens.PlayerRoute
 import com.example.kniha_20.ui.screens.editor.EditorScreen
 import com.example.kniha_20.ui.screens.home.HomeScreen
 import com.example.kniha_20.ui.screens.player.PlayerScreen
