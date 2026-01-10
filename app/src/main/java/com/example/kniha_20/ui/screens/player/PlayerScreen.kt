@@ -1,12 +1,15 @@
 package com.example.kniha_20.ui.screens.player
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable // DŮLEŽITÝ IMPORT PRO KLIKÁNÍ
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.kniha_20.R
 import com.example.kniha_20.ui.components.NavImageButton
@@ -19,7 +22,9 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPageCurlApi::class)
 @Composable
-fun PlayerScreen(onBack: () -> Unit) {
+fun PlayerScreen(
+    onBack: () -> Unit
+) {
     val scope = rememberCoroutineScope()
     val totalPages = 12
     val spreads = (totalPages + 1) / 2
@@ -33,6 +38,7 @@ fun PlayerScreen(onBack: () -> Unit) {
     )
 
     Box(Modifier.fillMaxSize()) {
+        // 1. Kniha (spodní vrstva)
         PageCurl(count = spreads, state = curl, config = config) { spreadIndex ->
             val leftPage = spreadIndex * 2 + 1
             val rightPage = leftPage + 1
@@ -47,21 +53,38 @@ fun PlayerScreen(onBack: () -> Unit) {
             }
         }
 
-        // Tlačítko Zpět
-        androidx.compose.material3.Button(
-            onClick = onBack,
-            modifier = Modifier.padding(16.dp).align(Alignment.TopStart)
+        // 2. Tlačítko DOMŮ (vpravo nahoře) - UPRAVENO
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd) // Zarovnání vpravo nahoru
+                // --- NASTAVENÍ POZICE ---
+                // top: čím větší číslo, tím níže bude
+                // end: čím větší číslo, tím více vlevo bude
+                .padding(top = 30.dp, end = 30.dp)
+                .size(60.dp) // Velikost ikonky
+                .clickable { onBack() } // Reakce na kliknutí
         ) {
-            androidx.compose.material3.Text("Menu")
+            Image(
+                painter = painterResource(id = R.drawable.home_button),
+                contentDescription = "Domů",
+                modifier = Modifier.fillMaxSize()
+            )
         }
 
+        // 3. Navigační šipky
         if (curl.current > 0) {
-            NavImageButton(resId = R.drawable.btn_prev, modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)) {
+            NavImageButton(
+                resId = R.drawable.btn_prev,
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)
+            ) {
                 scope.launch { curl.prev() }
             }
         }
         if (curl.current < spreads - 1) {
-            NavImageButton(resId = R.drawable.btn_next, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)) {
+            NavImageButton(
+                resId = R.drawable.btn_next,
+                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
+            ) {
                 scope.launch { curl.next() }
             }
         }
