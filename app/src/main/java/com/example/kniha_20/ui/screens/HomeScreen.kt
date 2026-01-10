@@ -1,4 +1,4 @@
-package com.example.kniha_20.ui.screen
+package com.example.kniha_20.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button

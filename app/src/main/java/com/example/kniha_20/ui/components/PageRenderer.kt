@@ -1,7 +1,6 @@
 package com.example.kniha_20.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
@@ -13,10 +12,19 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.kniha_20.model.*
+import com.example.kniha_20.data.model.AudioDecorator
+import com.example.kniha_20.data.model.BackgroundDecorator
+import com.example.kniha_20.data.model.BookComponent
+import com.example.kniha_20.data.model.EmptyThing
+import com.example.kniha_20.data.model.GridLayout
+import com.example.kniha_20.data.model.ImagerThing
+import com.example.kniha_20.data.model.InsetDecorator
+import com.example.kniha_20.data.model.OpacityDecorator
+import com.example.kniha_20.data.model.SplitLayout
+import com.example.kniha_20.data.model.TextThing
+import com.example.kniha_20.data.model.VideoThing
 
 /**
  * REKURZIVNÍ RENDERER

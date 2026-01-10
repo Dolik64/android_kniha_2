@@ -1,9 +1,10 @@
-package com.example.kniha_20.model
+package com.example.kniha_20.data.model
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
+import java.util.UUID
 
 // --- KOŘENOVÝ OBJEKT ---
 @Serializable
@@ -83,7 +84,7 @@ data class SplitLayout(
 @Serializable
 @SerialName("imager")
 data class ImagerThing(
-    val id: String = java.util.UUID.randomUUID().toString(),
+    val id: String = UUID.randomUUID().toString(),
     val options: ImageOptions? = null
 ) : BookComponent
 

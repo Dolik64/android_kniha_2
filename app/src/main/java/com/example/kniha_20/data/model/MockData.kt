@@ -1,4 +1,4 @@
-package com.example.kniha_20.model
+package com.example.kniha_20.data.model
 
 object MockData {
 
